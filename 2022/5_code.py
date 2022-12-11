@@ -12,39 +12,27 @@ def parse_crate_positions(crate_data):
     for column in crates: crates[column] = crates[column][::-1]
     return crates
 
-
-def process_crates_silver(crates, proc):
+def process_crates(crates, proc, metal):
     for command in proc:
-        # number of crates to move [1], from col [3], to col [5]
         command = command.strip().split(' ')
         num_crates = int(command[1])
         from_col = int(command[3])
         to_col = int(command[5])
-        for _ in range(num_crates):
-            crates[to_col].append(crates[from_col].pop())
+        if metal == 'SILVER':
+            for _ in range(num_crates):
+                crates[to_col].append(crates[from_col].pop())
+        elif metal == 'GOLD':
+            crates[to_col].extend(crates[from_col][-num_crates:])
+            crates[from_col] = crates[from_col][:-num_crates]
     return crates
 
-
-def process_crates_gold(crates, proc):
-    for command in proc:
-        # number of crates to move [1], from col [3], to col [5]
-        command = command.strip().split(' ')
-        num_crates = int(command[1])
-        from_col = int(command[3])
-        to_col = int(command[5])
-        crates[to_col].extend(crates[from_col][-num_crates:])
-        crates[from_col] = crates[from_col][:-num_crates]
-    return crates
-
-
-def list_caps(crates):
+def list_caps(crates, metal):
     caps = []
     for i in range(len(crates)):
         caps.append(crates[i+1][-1])
-    print(''.join(caps))
+    print(f"{metal}: {''.join(caps)}")
 
-
-with open('5_input.txt') as f:
+def parse_input(f):
     crate_data = []
     proc = []
     crate_info = True
@@ -55,10 +43,16 @@ with open('5_input.txt') as f:
         else:
             proc.append(line)
     proc = proc[1:]
+    return crate_data, proc
+
+def main():
+    cases = ('SILVER', 'GOLD')
+    with open('5_input.txt') as f:
+        crate_data, proc = parse_input(f)
     crates = parse_crate_positions(crate_data)
-    crates_1 = deepcopy(crates)
-    crates_2 = deepcopy(crates)
-    silver_crates = process_crates_silver(crates_1, proc)
-    list_caps(silver_crates)
-    gold_crates = process_crates_gold(crates_2, proc)
-    list_caps(gold_crates)
+    for metal in cases:
+        metal_crates = process_crates(deepcopy(crates), proc, metal)
+        list_caps(metal_crates, metal)
+
+if __name__ == '__main__':
+    main()
