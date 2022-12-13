@@ -17,25 +17,26 @@ class Node():
         for dx, dy in deltas:
             newx, newy = x + dx, y + dy
             try:
-                check = (
-                    maze[newy][newx] <= (maze[y][x] + 1)
-                    and newx >= 0
-                    and newy >= 0
-                )
-                if check:
+                valid = ( maze[newy][newx] <= (maze[y][x] + 1)
+                          and newx >= 0
+                          and newy >= 0 )
+                if valid:
                     yield Node((newx, newy), self)
             except IndexError:
                 pass
 
+    def give_path(self):
+        path = []
+        current = self
+        while current is not None:
+            path.append(current.position)
+            current = current.parent
+        return path[::-1]
 
 def astar(maze, start, end):
-    deltas = (
-        (1, 0), (-1, 0), # only x
-        (0, 1), (0, -1) # only y
-    )
+    deltas = ((1, 0), (-1, 0), (0, 1), (0, -1))
     start_node = Node(start)
     end_node = Node(end)
-    
     open_list = []
     closed_list = []
     
@@ -49,52 +50,30 @@ def astar(maze, start, end):
         closed_list.append(current_node)
 
         if current_node == end_node:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.position)
-                current = current.parent
-            return path[::-1] # Return reversed path
+            return current_node.give_path()
 
         for neighbor in current_node.possible_moves(maze, deltas):
             old_f = neighbor.f
-            if neighbor in closed_list:
-                continue
-            else:
+
+            if neighbor not in closed_list:
                 neighbor.g = current_node.g + 1
-                neighbor.h = (end_node.position[0] - neighbor.position[0]) + (end_node.position[1] - neighbor.position[1])
+                neighbor.h = sum([x-y for (x,y) in zip(end_node.position, neighbor.position)])
                 neighbor.f = neighbor.g + neighbor.h
 
-            if neighbor not in open_list or neighbor.f < old_f: 
-                open_list.append(neighbor)
-
-def parse_matrix(matrix):
-    parsed_matrix = []
-    possible_starts = []
-    for i,row in enumerate(matrix):
-        parsed_row = []
-        for j,val in enumerate(row):
-            if val == 'S':
-                start = (j,i)
-                parsed_row.append(1)
-                possible_starts.append(start)
-            elif val == 'E':
-                end = (j,i)
-                parsed_row.append(26)
-            else:
-                parsed_row.append(ord(val) - 96)
-                if (ord(val) - 96) == 1:
-                    possible_starts.append((j,i))
-        parsed_matrix.append(parsed_row)
-    return parsed_matrix, possible_starts, start, end
+                if neighbor not in open_list or neighbor.f < old_f:
+                    open_list.append(neighbor)
 
 def main():
     with open('12_input.txt') as f:
         matrix = [line.strip() for line in f]
-        matrix = [[x for x in string] for string in matrix]
-        maze, possible_starts, start, end = parse_matrix(matrix)
-        path = astar(maze, start, end)
-        new_paths = [astar(maze, s, end) for s in tqdm(possible_starts)]
+        matrix = [[ord(x)-96 for x in string] for string in matrix]
+        [start] = [(index2,index1) for (index1,sub_list) in enumerate(matrix) for (index2,element) in enumerate(sub_list) if element==-13]
+        matrix[start[1]][start[0]] = 1
+        [end] = [(index2,index1) for (index1,sub_list) in enumerate(matrix) for (index2,element) in enumerate(sub_list) if element==-27]
+        matrix[end[1]][end[0]] = 26
+        possible_starts = [(index2,index1) for (index1,sub_list) in enumerate(matrix) for (index2,element) in enumerate(sub_list) if element==1]
+        path = astar(matrix, start, end)
+        new_paths = [astar(matrix, s, end) for s in tqdm(possible_starts)]
         new_path = sorted([len(p) for p in new_paths if p is not None])[0]
         print(f'SILVER: {len(path)-1}')
         print(f'GOLD: {new_path-1}')
